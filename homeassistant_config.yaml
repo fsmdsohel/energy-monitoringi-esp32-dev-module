@@ -1,0 +1,70 @@
+# MQTT Sensor Configuration for Energy Monitor
+# Add this to your configuration.yaml file
+
+mqtt:
+  sensor:
+    - name: "Energy Monitor Voltage"
+      unique_id: "energy_monitor_voltage"
+      state_topic: "home/sensor/voltage"
+      unit_of_measurement: "V"
+      device_class: voltage
+      state_class: measurement
+      expire_after: 60
+
+    - name: "Energy Monitor Current"
+      unique_id: "energy_monitor_current"
+      state_topic: "home/sensor/current"
+      unit_of_measurement: "A"
+      device_class: current
+      state_class: measurement
+      expire_after: 60
+
+    - name: "Energy Monitor Power"
+      unique_id: "energy_monitor_power"
+      state_topic: "home/sensor/power"
+      unit_of_measurement: "W"
+      device_class: power
+      state_class: measurement
+      expire_after: 60
+
+# Create energy sensors from power readings
+sensor:
+  # Convert power (W) to energy (kWh) using integration sensor
+  - platform: integration
+    source: sensor.energy_monitor_power
+    name: "Energy Monitor Energy"
+    unit_prefix: k
+    round: 2
+    method: left
+    unit_time: h
+
+template:
+  - sensor:
+      - name: "Energy Monitor Energy Total"
+        unique_id: "energy_monitor_energy_total"
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        state: >
+          {% if is_number(states('sensor.energy_monitor_energy')) %}
+            {{ states('sensor.energy_monitor_energy') | float }}
+          {% else %}
+            0
+          {% endif %}
+
+# Energy dashboard utility meters - track energy consumption over different periods
+utility_meter:
+  energy_monitor_daily:
+    source: sensor.energy_monitor_energy_total
+    cycle: daily
+    name: Daily Energy Consumption
+
+  energy_monitor_weekly:
+    source: sensor.energy_monitor_energy_total
+    cycle: weekly
+    name: Weekly Energy Consumption
+
+  energy_monitor_monthly:
+    source: sensor.energy_monitor_energy_total
+    cycle: monthly
+    name: Monthly Energy Consumption
